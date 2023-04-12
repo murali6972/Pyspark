@@ -1,0 +1,217 @@
+In [1]:
+
+import findspark
+findspark.init('/home/murali/spark-3.3.2-bin-hadoop3')
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.appName("LoadRemoteFile").getOrCreate()
+
+from pyspark import SparkFiles  
+url = "https://raw.githubusercontent.com/murali6972/dataSets/main/small_radio_json.json"
+spark.sparkContext.addFile(url)
+df = spark.read.json(SparkFiles.get("small_radio_json.json"))
+df.count()
+
+23/04/02 15:55:06 WARN Utils: Your hostname, murali-VirtualBox resolves to a loopback address: 127.0.1.1; using 10.0.2.15 instead (on interface enp0s3)
+23/04/02 15:55:06 WARN Utils: Set SPARK_LOCAL_IP if you need to bind to another address
+
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+
+23/04/02 15:55:06 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+23/04/02 15:55:07 WARN Utils: Service 'SparkUI' could not bind on port 4040. Attempting port 4041.
+
+Out[1]:
+
+25
+
+In [2]:
+
+df.printSchema()
+
+root
+ |-- artist: string (nullable = true)
+ |-- auth: string (nullable = true)
+ |-- firstName: string (nullable = true)
+ |-- gender: string (nullable = true)
+ |-- itemInSession: long (nullable = true)
+ |-- lastName: string (nullable = true)
+ |-- length: double (nullable = true)
+ |-- level: string (nullable = true)
+ |-- location: string (nullable = true)
+ |-- method: string (nullable = true)
+ |-- page: string (nullable = true)
+ |-- registration: long (nullable = true)
+ |-- sessionId: long (nullable = true)
+ |-- song: string (nullable = true)
+ |-- status: long (nullable = true)
+ |-- ts: long (nullable = true)
+ |-- userId: string (nullable = true)
+
+In [3]:
+
+df.show(3)
+df.select('artist','auth','firstName','gender').show()
+
++--------------------+---------+---------+------+-------------+----------+---------+-----+--------------------+------+--------+-------------+---------+--------------------+------+-------------+------+
+|              artist|     auth|firstName|gender|itemInSession|  lastName|   length|level|            location|method|    page| registration|sessionId|                song|status|           ts|userId|
++--------------------+---------+---------+------+-------------+----------+---------+-----+--------------------+------+--------+-------------+---------+--------------------+------+-------------+------+
+|         El Arrebato|Logged In| Annalyse|     F|            2|Montgomery|234.57914| free|  Killeen-Temple, TX|   PUT|NextSong|1384448062332|     1879|Quiero Quererte Q...|   200|1409318650332|   309|
+|Creedence Clearwa...|Logged In|   Dylann|     M|            9|    Thomas|340.87138| paid|       Anchorage, AK|   PUT|NextSong|1400723739332|       10|        Born To Move|   200|1409318653332|    11|
+|            Gorillaz|Logged In|     Liam|     M|           11|     Watts|246.17751| paid|New York-Newark-J...|   PUT|NextSong|1406279422332|     2047|                DARE|   200|1409318685332|   201|
++--------------------+---------+---------+------+-------------+----------+---------+-----+--------------------+------+--------+-------------+---------+--------------------+------+-------------+------+
+only showing top 3 rows
+
++--------------------+---------+---------+------+
+|              artist|     auth|firstName|gender|
++--------------------+---------+---------+------+
+|         El Arrebato|Logged In| Annalyse|     F|
+|Creedence Clearwa...|Logged In|   Dylann|     M|
+|            Gorillaz|Logged In|     Liam|     M|
+|                null|Logged In|     Tess|     F|
+|        Otis Redding|Logged In|  Margaux|     F|
+|    Slightly Stoopid|Logged In|     Alan|     M|
+|                NOFX|Logged In|Gabriella|     F|
+|             Nirvana|Logged In|   Elijah|     M|
+|            Aventura|Logged In|  Margaux|     F|
+|            Harmonia|Logged In|     Tess|     F|
+|        Spragga Benz|Logged In|     Alan|     M|
+|          Bananarama|Logged In|     Liam|     M|
+|                null|Logged In|     Liam|     M|
+|     Alliance Ethnik|Logged In|   Dylann|     M|
+|         Sense Field|Logged In|     Alan|     M|
+|         Binary Star|Logged In|   Elijah|     M|
+|Sarah Borges and ...|Logged In|  Margaux|     F|
+|             Incubus|Logged In|     Alan|     M|
+|     Ella Fitzgerald|Logged In|   Dylann|     M|
+|                10cc|Logged In|  Margaux|     F|
++--------------------+---------+---------+------+
+only showing top 20 rows
+
+In [4]:
+
+df.select(df.artist,df.auth, df.firstName, df.gender).show()
+
++--------------------+---------+---------+------+
+|              artist|     auth|firstName|gender|
++--------------------+---------+---------+------+
+|         El Arrebato|Logged In| Annalyse|     F|
+|Creedence Clearwa...|Logged In|   Dylann|     M|
+|            Gorillaz|Logged In|     Liam|     M|
+|                null|Logged In|     Tess|     F|
+|        Otis Redding|Logged In|  Margaux|     F|
+|    Slightly Stoopid|Logged In|     Alan|     M|
+|                NOFX|Logged In|Gabriella|     F|
+|             Nirvana|Logged In|   Elijah|     M|
+|            Aventura|Logged In|  Margaux|     F|
+|            Harmonia|Logged In|     Tess|     F|
+|        Spragga Benz|Logged In|     Alan|     M|
+|          Bananarama|Logged In|     Liam|     M|
+|                null|Logged In|     Liam|     M|
+|     Alliance Ethnik|Logged In|   Dylann|     M|
+|         Sense Field|Logged In|     Alan|     M|
+|         Binary Star|Logged In|   Elijah|     M|
+|Sarah Borges and ...|Logged In|  Margaux|     F|
+|             Incubus|Logged In|     Alan|     M|
+|     Ella Fitzgerald|Logged In|   Dylann|     M|
+|                10cc|Logged In|  Margaux|     F|
++--------------------+---------+---------+------+
+only showing top 20 rows
+
+In [5]:
+
+from pyspark.sql.functions import col
+
+In [8]:
+
+df.select(col('artist'),col('auth'),col('firstName')).show()
+
++--------------------+---------+---------+
+|              artist|     auth|firstName|
++--------------------+---------+---------+
+|         El Arrebato|Logged In| Annalyse|
+|Creedence Clearwa...|Logged In|   Dylann|
+|            Gorillaz|Logged In|     Liam|
+|                null|Logged In|     Tess|
+|        Otis Redding|Logged In|  Margaux|
+|    Slightly Stoopid|Logged In|     Alan|
+|                NOFX|Logged In|Gabriella|
+|             Nirvana|Logged In|   Elijah|
+|            Aventura|Logged In|  Margaux|
+|            Harmonia|Logged In|     Tess|
+|        Spragga Benz|Logged In|     Alan|
+|          Bananarama|Logged In|     Liam|
+|                null|Logged In|     Liam|
+|     Alliance Ethnik|Logged In|   Dylann|
+|         Sense Field|Logged In|     Alan|
+|         Binary Star|Logged In|   Elijah|
+|Sarah Borges and ...|Logged In|  Margaux|
+|             Incubus|Logged In|     Alan|
+|     Ella Fitzgerald|Logged In|   Dylann|
+|                10cc|Logged In|  Margaux|
++--------------------+---------+---------+
+only showing top 20 rows
+
+In [9]:
+
+df.select('*').show()
+
++--------------------+---------+---------+------+-------------+----------+---------+-----+--------------------+------+--------+-------------+---------+--------------------+------+-------------+------+
+|              artist|     auth|firstName|gender|itemInSession|  lastName|   length|level|            location|method|    page| registration|sessionId|                song|status|           ts|userId|
++--------------------+---------+---------+------+-------------+----------+---------+-----+--------------------+------+--------+-------------+---------+--------------------+------+-------------+------+
+|         El Arrebato|Logged In| Annalyse|     F|            2|Montgomery|234.57914| free|  Killeen-Temple, TX|   PUT|NextSong|1384448062332|     1879|Quiero Quererte Q...|   200|1409318650332|   309|
+|Creedence Clearwa...|Logged In|   Dylann|     M|            9|    Thomas|340.87138| paid|       Anchorage, AK|   PUT|NextSong|1400723739332|       10|        Born To Move|   200|1409318653332|    11|
+|            Gorillaz|Logged In|     Liam|     M|           11|     Watts|246.17751| paid|New York-Newark-J...|   PUT|NextSong|1406279422332|     2047|                DARE|   200|1409318685332|   201|
+|                null|Logged In|     Tess|     F|            0|  Townsend|     null| free|Nashville-Davidso...|   GET|    Home|1406970190332|     2136|                null|   200|1409318686332|   779|
+|        Otis Redding|Logged In|  Margaux|     F|            2|     Smith|135.57506| free|Atlanta-Sandy Spr...|   PUT|NextSong|1406191211332|      400| Send Me Some Lovin'|   200|1409318697332|   401|
+|    Slightly Stoopid|Logged In|     Alan|     M|           39|     Morse|198.53016| paid|Chicago-Napervill...|   PUT|NextSong|1401760632332|      520|         Mellow Mood|   200|1409318714332|   521|
+|                NOFX|Logged In|Gabriella|     F|            1|   Shelton| 130.2722| free|San Jose-Sunnyval...|   PUT|NextSong|1389460542332|     2261|            Linoleum|   200|1409318743332|   244|
+|             Nirvana|Logged In|   Elijah|     M|            0|  Williams|260.98893| paid|Detroit-Warren-De...|   PUT|NextSong|1388691347332|      968|The Man Who Sold ...|   200|1409318804332|   969|
+|            Aventura|Logged In|  Margaux|     F|            3|     Smith|293.56363| free|Atlanta-Sandy Spr...|   PUT|NextSong|1406191211332|      400|             La Nina|   200|1409318832332|   401|
+|            Harmonia|Logged In|     Tess|     F|            1|  Townsend|655.77751| free|Nashville-Davidso...|   PUT|NextSong|1406970190332|     2136|       Sehr kosmisch|   200|1409318891332|   779|
+|        Spragga Benz|Logged In|     Alan|     M|           40|     Morse|122.53995| paid|Chicago-Napervill...|   PUT|NextSong|1401760632332|      520|            Backshot|   200|1409318912332|   521|
+|          Bananarama|Logged In|     Liam|     M|           12|     Watts|208.92689| paid|New York-Newark-J...|   PUT|NextSong|1406279422332|     2047|Love In The First...|   200|1409318931332|   201|
+|                null|Logged In|     Liam|     M|           13|     Watts|     null| paid|New York-Newark-J...|   GET|    Home|1406279422332|     2047|                null|   200|1409318931332|   201|
+|     Alliance Ethnik|Logged In|   Dylann|     M|           10|    Thomas|252.21179| paid|       Anchorage, AK|   PUT|NextSong|1400723739332|       10|       ReprÃÂ©sente|   200|1409318993332|    11|
+|         Sense Field|Logged In|     Alan|     M|           41|     Morse|181.86404| paid|Chicago-Napervill...|   PUT|NextSong|1401760632332|      520|         Am I A Fool|   200|1409319034332|   521|
+|         Binary Star|Logged In|   Elijah|     M|            1|  Williams|268.93016| paid|Detroit-Warren-De...|   PUT|NextSong|1388691347332|      968|       Solar Powered|   200|1409319064332|   969|
+|Sarah Borges and ...|Logged In|  Margaux|     F|            4|     Smith|158.95465| free|Atlanta-Sandy Spr...|   PUT|NextSong|1406191211332|      400|      Do It For Free|   200|1409319125332|   401|
+|             Incubus|Logged In|     Alan|     M|           42|     Morse|232.46322| paid|Chicago-Napervill...|   PUT|NextSong|1401760632332|      520|               Drive|   200|1409319215332|   521|
+|     Ella Fitzgerald|Logged In|   Dylann|     M|           11|    Thomas|427.15383| paid|       Anchorage, AK|   PUT|NextSong|1400723739332|       10|On Green Dolphin ...|   200|1409319245332|    11|
+|                10cc|Logged In|  Margaux|     F|            5|     Smith|241.34485| free|Atlanta-Sandy Spr...|   PUT|NextSong|1406191211332|      400|          Silly Love|   200|1409319283332|   401|
++--------------------+---------+---------+------+-------------+----------+---------+-----+--------------------+------+--------+-------------+---------+--------------------+------+-------------+------+
+only showing top 20 rows
+
+In [10]:
+
+df.select([col for col in df.columns]).show()
+
++--------------------+---------+---------+------+-------------+----------+---------+-----+--------------------+------+--------+-------------+---------+--------------------+------+-------------+------+
+|              artist|     auth|firstName|gender|itemInSession|  lastName|   length|level|            location|method|    page| registration|sessionId|                song|status|           ts|userId|
++--------------------+---------+---------+------+-------------+----------+---------+-----+--------------------+------+--------+-------------+---------+--------------------+------+-------------+------+
+|         El Arrebato|Logged In| Annalyse|     F|            2|Montgomery|234.57914| free|  Killeen-Temple, TX|   PUT|NextSong|1384448062332|     1879|Quiero Quererte Q...|   200|1409318650332|   309|
+|Creedence Clearwa...|Logged In|   Dylann|     M|            9|    Thomas|340.87138| paid|       Anchorage, AK|   PUT|NextSong|1400723739332|       10|        Born To Move|   200|1409318653332|    11|
+|            Gorillaz|Logged In|     Liam|     M|           11|     Watts|246.17751| paid|New York-Newark-J...|   PUT|NextSong|1406279422332|     2047|                DARE|   200|1409318685332|   201|
+|                null|Logged In|     Tess|     F|            0|  Townsend|     null| free|Nashville-Davidso...|   GET|    Home|1406970190332|     2136|                null|   200|1409318686332|   779|
+|        Otis Redding|Logged In|  Margaux|     F|            2|     Smith|135.57506| free|Atlanta-Sandy Spr...|   PUT|NextSong|1406191211332|      400| Send Me Some Lovin'|   200|1409318697332|   401|
+|    Slightly Stoopid|Logged In|     Alan|     M|           39|     Morse|198.53016| paid|Chicago-Napervill...|   PUT|NextSong|1401760632332|      520|         Mellow Mood|   200|1409318714332|   521|
+|                NOFX|Logged In|Gabriella|     F|            1|   Shelton| 130.2722| free|San Jose-Sunnyval...|   PUT|NextSong|1389460542332|     2261|            Linoleum|   200|1409318743332|   244|
+|             Nirvana|Logged In|   Elijah|     M|            0|  Williams|260.98893| paid|Detroit-Warren-De...|   PUT|NextSong|1388691347332|      968|The Man Who Sold ...|   200|1409318804332|   969|
+|            Aventura|Logged In|  Margaux|     F|            3|     Smith|293.56363| free|Atlanta-Sandy Spr...|   PUT|NextSong|1406191211332|      400|             La Nina|   200|1409318832332|   401|
+|            Harmonia|Logged In|     Tess|     F|            1|  Townsend|655.77751| free|Nashville-Davidso...|   PUT|NextSong|1406970190332|     2136|       Sehr kosmisch|   200|1409318891332|   779|
+|        Spragga Benz|Logged In|     Alan|     M|           40|     Morse|122.53995| paid|Chicago-Napervill...|   PUT|NextSong|1401760632332|      520|            Backshot|   200|1409318912332|   521|
+|          Bananarama|Logged In|     Liam|     M|           12|     Watts|208.92689| paid|New York-Newark-J...|   PUT|NextSong|1406279422332|     2047|Love In The First...|   200|1409318931332|   201|
+|                null|Logged In|     Liam|     M|           13|     Watts|     null| paid|New York-Newark-J...|   GET|    Home|1406279422332|     2047|                null|   200|1409318931332|   201|
+|     Alliance Ethnik|Logged In|   Dylann|     M|           10|    Thomas|252.21179| paid|       Anchorage, AK|   PUT|NextSong|1400723739332|       10|       ReprÃÂ©sente|   200|1409318993332|    11|
+|         Sense Field|Logged In|     Alan|     M|           41|     Morse|181.86404| paid|Chicago-Napervill...|   PUT|NextSong|1401760632332|      520|         Am I A Fool|   200|1409319034332|   521|
+|         Binary Star|Logged In|   Elijah|     M|            1|  Williams|268.93016| paid|Detroit-Warren-De...|   PUT|NextSong|1388691347332|      968|       Solar Powered|   200|1409319064332|   969|
+|Sarah Borges and ...|Logged In|  Margaux|     F|            4|     Smith|158.95465| free|Atlanta-Sandy Spr...|   PUT|NextSong|1406191211332|      400|      Do It For Free|   200|1409319125332|   401|
+|             Incubus|Logged In|     Alan|     M|           42|     Morse|232.46322| paid|Chicago-Napervill...|   PUT|NextSong|1401760632332|      520|               Drive|   200|1409319215332|   521|
+|     Ella Fitzgerald|Logged In|   Dylann|     M|           11|    Thomas|427.15383| paid|       Anchorage, AK|   PUT|NextSong|1400723739332|       10|On Green Dolphin ...|   200|1409319245332|    11|
+|                10cc|Logged In|  Margaux|     F|            5|     Smith|241.34485| free|Atlanta-Sandy Spr...|   PUT|NextSong|1406191211332|      400|          Silly Love|   200|1409319283332|   401|
++--------------------+---------+---------+------+-------------+----------+---------+-----+--------------------+------+--------+-------------+---------+--------------------+------+-------------+------+
+only showing top 20 rows
+
+In [ ]:
+
+ 
+

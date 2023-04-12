@@ -1,0 +1,1222 @@
+In [1]:
+
+import findspark
+findspark.init('/home/murali/spark-3.3.2-bin-hadoop3')
+
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.appName("MapType").getOrCreate()
+
+23/04/02 15:12:32 WARN Utils: Your hostname, murali-VirtualBox resolves to a loopback address: 127.0.1.1; using 10.0.2.15 instead (on interface enp0s3)
+23/04/02 15:12:32 WARN Utils: Set SPARK_LOCAL_IP if you need to bind to another address
+
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+
+23/04/02 15:12:32 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+
+
+  A Map data type is nothing but a Dictonay type of data¶
+  <#A-Map-data-type-is-nothing-but-a-Dictonay-type-of-data>
+
+In [2]:
+
+data = [    
+    ('Murali',{'mother' : 'Padma', 'father' : 'venkat' }),
+    ('Geetha',{'mother' : 'Kasturi', 'father' : 'Varada' }),
+    ('Kishan',{'mother' : 'Geetha', 'father' : 'Murali' }),
+    ('Sasi',{'mother' : 'Geetha', 'father' : 'Murali' })
+]
+
+schema = ['name','properties']
+df = spark.createDataFrame(data,schema=schema)
+df.show()
+df.printSchema()
+
+                                                                                
+
++------+--------------------+
+|  name|          properties|
++------+--------------------+
+|Murali|{mother -> Padma,...|
+|Geetha|{mother -> Kastur...|
+|Kishan|{mother -> Geetha...|
+|  Sasi|{mother -> Geetha...|
++------+--------------------+
+
+root
+ |-- name: string (nullable = true)
+ |-- properties: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+
+In [3]:
+
+from pyspark.sql.types import StructType, StructField, StringType, MapType
+schema = StructType([
+          StructField('Name', dataType=StringType()),
+          StructField('Parents', dataType=MapType(keyType=StringType(), valueType=StringType()))
+])
+
+In [4]:
+
+df = spark.createDataFrame(data, schema= schema)
+
+In [5]:
+
+df.show()
+df.printSchema()
+
++------+--------------------+
+|  Name|             Parents|
++------+--------------------+
+|Murali|{mother -> Padma,...|
+|Geetha|{mother -> Kastur...|
+|Kishan|{mother -> Geetha...|
+|  Sasi|{mother -> Geetha...|
++------+--------------------+
+
+root
+ |-- Name: string (nullable = true)
+ |-- Parents: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+
+In [6]:
+
+df.withColumn('father',df.Parents['father']).\
+withColumn('mother',df.Parents['mother']).\
+show(truncate=False)
+
++------+-------------------------------------+------+-------+
+|Name  |Parents                              |father|mother |
++------+-------------------------------------+------+-------+
+|Murali|{mother -> Padma, father -> venkat}  |venkat|Padma  |
+|Geetha|{mother -> Kasturi, father -> Varada}|Varada|Kasturi|
+|Kishan|{mother -> Geetha, father -> Murali} |Murali|Geetha |
+|Sasi  |{mother -> Geetha, father -> Murali} |Murali|Geetha |
++------+-------------------------------------+------+-------+
+
+
+  getItem()¶ <#getItem()>
+
+In [7]:
+
+df.withColumn('father', df.Parents.getItem('father')).show(truncate=False)
+
++------+-------------------------------------+------+
+|Name  |Parents                              |father|
++------+-------------------------------------+------+
+|Murali|{mother -> Padma, father -> venkat}  |venkat|
+|Geetha|{mother -> Kasturi, father -> Varada}|Varada|
+|Kishan|{mother -> Geetha, father -> Murali} |Murali|
+|Sasi  |{mother -> Geetha, father -> Murali} |Murali|
++------+-------------------------------------+------+
+
+
+  using spark sql - createOrReplaceTempView()¶
+  <#using-spark-sql---createOrReplaceTempView()>
+
+In [8]:
+
+df.createOrReplaceTempView('family')
+results = spark.sql('select * from family')
+results.show(truncate=False)
+
+spark.sql('select name, split(Parents[\'father\'],":")[0] as Father, \
+          split(Parents[\'mother\'],":")[0] as mother from family').show()
+
++------+-------------------------------------+
+|Name  |Parents                              |
++------+-------------------------------------+
+|Murali|{mother -> Padma, father -> venkat}  |
+|Geetha|{mother -> Kasturi, father -> Varada}|
+|Kishan|{mother -> Geetha, father -> Murali} |
+|Sasi  |{mother -> Geetha, father -> Murali} |
++------+-------------------------------------+
+
++------+------+-------+
+|  name|Father| mother|
++------+------+-------+
+|Murali|venkat|  Padma|
+|Geetha|Varada|Kasturi|
+|Kishan|Murali| Geetha|
+|  Sasi|Murali| Geetha|
++------+------+-------+
+
+
+  explode(), map_keys() & map_values()¶
+  <#explode(),-map_keys()-&-map_values()>
+
+In [9]:
+
+df.show()
+
++------+--------------------+
+|  Name|             Parents|
++------+--------------------+
+|Murali|{mother -> Padma,...|
+|Geetha|{mother -> Kastur...|
+|Kishan|{mother -> Geetha...|
+|  Sasi|{mother -> Geetha...|
++------+--------------------+
+
+In [10]:
+
+from pyspark.sql.functions import map_values, map_keys
+
+df.withColumn('mother',map_values(df.Parents)[0]).\
+withColumn('father',map_values(df.Parents)[1]).\
+show(truncate=False)
+
++------+-------------------------------------+-------+------+
+|Name  |Parents                              |mother |father|
++------+-------------------------------------+-------+------+
+|Murali|{mother -> Padma, father -> venkat}  |Padma  |venkat|
+|Geetha|{mother -> Kasturi, father -> Varada}|Kasturi|Varada|
+|Kishan|{mother -> Geetha, father -> Murali} |Geetha |Murali|
+|Sasi  |{mother -> Geetha, father -> Murali} |Geetha |Murali|
++------+-------------------------------------+-------+------+
+
+In [11]:
+
+df1 = df.withColumn('Keys',map_keys(df.Parents)) 
+df1.show()
+
++------+--------------------+----------------+
+|  Name|             Parents|            Keys|
++------+--------------------+----------------+
+|Murali|{mother -> Padma,...|[mother, father]|
+|Geetha|{mother -> Kastur...|[mother, father]|
+|Kishan|{mother -> Geetha...|[mother, father]|
+|  Sasi|{mother -> Geetha...|[mother, father]|
++------+--------------------+----------------+
+
+
+  Row Class¶ <#Row-Class>
+
+In [12]:
+
+from pyspark.sql import Row
+
+In [13]:
+
+help(Row)
+
+Help on class Row in module pyspark.sql.types:
+
+class Row(builtins.tuple)
+ |  Row(*args: Optional[str], **kwargs: Optional[Any]) -> 'Row'
+ |  
+ |  A row in :class:`DataFrame`.
+ |  The fields in it can be accessed:
+ |  
+ |  * like attributes (``row.key``)
+ |  * like dictionary values (``row[key]``)
+ |  
+ |  ``key in row`` will search through row keys.
+ |  
+ |  Row can be used to create a row object by using named arguments.
+ |  It is not allowed to omit a named argument to represent that the value is
+ |  None or missing. This should be explicitly set to None in this case.
+ |  
+ |  .. versionchanged:: 3.0.0
+ |      Rows created from named arguments no longer have
+ |      field names sorted alphabetically and will be ordered in the position as
+ |      entered.
+ |  
+ |  Examples
+ |  --------
+ |  >>> row = Row(name="Alice", age=11)
+ |  >>> row
+ |  Row(name='Alice', age=11)
+ |  >>> row['name'], row['age']
+ |  ('Alice', 11)
+ |  >>> row.name, row.age
+ |  ('Alice', 11)
+ |  >>> 'name' in row
+ |  True
+ |  >>> 'wrong_key' in row
+ |  False
+ |  
+ |  Row also can be used to create another Row like class, then it
+ |  could be used to create Row objects, such as
+ |  
+ |  >>> Person = Row("name", "age")
+ |  >>> Person
+ |  <Row('name', 'age')>
+ |  >>> 'name' in Person
+ |  True
+ |  >>> 'wrong_key' in Person
+ |  False
+ |  >>> Person("Alice", 11)
+ |  Row(name='Alice', age=11)
+ |  
+ |  This form can also be used to create rows as tuple values, i.e. with unnamed
+ |  fields.
+ |  
+ |  >>> row1 = Row("Alice", 11)
+ |  >>> row2 = Row(name="Alice", age=11)
+ |  >>> row1 == row2
+ |  True
+ |  
+ |  Method resolution order:
+ |      Row
+ |      builtins.tuple
+ |      builtins.object
+ |  
+ |  Methods defined here:
+ |  
+ |  __call__(self, *args: Any) -> 'Row'
+ |      create new Row object
+ |  
+ |  __contains__(self, item: Any) -> bool
+ |      Return key in self.
+ |  
+ |  __getattr__(self, item: str) -> Any
+ |  
+ |  __getitem__(self, item: Any) -> Any
+ |      Return self[key].
+ |  
+ |  __reduce__(self) -> Union[str, Tuple[Any, ...]]
+ |      Returns a tuple so Python knows how to pickle Row.
+ |  
+ |  __repr__(self) -> str
+ |      Printable representation of Row used in Python REPL.
+ |  
+ |  __setattr__(self, key: Any, value: Any) -> None
+ |      Implement setattr(self, name, value).
+ |  
+ |  asDict(self, recursive: bool = False) -> Dict[str, Any]
+ |      Return as a dict
+ |      
+ |      Parameters
+ |      ----------
+ |      recursive : bool, optional
+ |          turns the nested Rows to dict (default: False).
+ |      
+ |      Notes
+ |      -----
+ |      If a row contains duplicate field names, e.g., the rows of a join
+ |      between two :class:`DataFrame` that both have the fields of same names,
+ |      one of the duplicate fields will be selected by ``asDict``. ``__getitem__``
+ |      will also return one of the duplicate fields, however returned value might
+ |      be different to ``asDict``.
+ |      
+ |      Examples
+ |      --------
+ |      >>> Row(name="Alice", age=11).asDict() == {'name': 'Alice', 'age': 11}
+ |      True
+ |      >>> row = Row(key=1, value=Row(name='a', age=2))
+ |      >>> row.asDict() == {'key': 1, 'value': Row(name='a', age=2)}
+ |      True
+ |      >>> row.asDict(True) == {'key': 1, 'value': {'name': 'a', 'age': 2}}
+ |      True
+ |  
+ |  ----------------------------------------------------------------------
+ |  Static methods defined here:
+ |  
+ |  __new__(cls, *args: Optional[str], **kwargs: Optional[Any]) -> 'Row'
+ |      Create and return a new object.  See help(type) for accurate signature.
+ |  
+ |  ----------------------------------------------------------------------
+ |  Data descriptors defined here:
+ |  
+ |  __dict__
+ |      dictionary for instance variables (if defined)
+ |  
+ |  ----------------------------------------------------------------------
+ |  Methods inherited from builtins.tuple:
+ |  
+ |  __add__(self, value, /)
+ |      Return self+value.
+ |  
+ |  __eq__(self, value, /)
+ |      Return self==value.
+ |  
+ |  __ge__(self, value, /)
+ |      Return self>=value.
+ |  
+ |  __getattribute__(self, name, /)
+ |      Return getattr(self, name).
+ |  
+ |  __getnewargs__(self, /)
+ |  
+ |  __gt__(self, value, /)
+ |      Return self>value.
+ |  
+ |  __hash__(self, /)
+ |      Return hash(self).
+ |  
+ |  __iter__(self, /)
+ |      Implement iter(self).
+ |  
+ |  __le__(self, value, /)
+ |      Return self<=value.
+ |  
+ |  __len__(self, /)
+ |      Return len(self).
+ |  
+ |  __lt__(self, value, /)
+ |      Return self<value.
+ |  
+ |  __mul__(self, value, /)
+ |      Return self*value.
+ |  
+ |  __ne__(self, value, /)
+ |      Return self!=value.
+ |  
+ |  __rmul__(self, value, /)
+ |      Return value*self.
+ |  
+ |  count(self, value, /)
+ |      Return number of occurrences of value.
+ |  
+ |  index(self, value, start=0, stop=9223372036854775807, /)
+ |      Return first index of value.
+ |      
+ |      Raises ValueError if the value is not present.
+ |  
+ |  ----------------------------------------------------------------------
+ |  Class methods inherited from builtins.tuple:
+ |  
+ |  __class_getitem__(...) from builtins.type
+ |      See PEP 585
+
+In [14]:
+
+row = Row('Murali',200)
+type(row)
+
+Out[14]:
+
+pyspark.sql.types.Row
+
+
+  a Row type creats a tuple so to access this we need to use indexes¶
+  <#a-Row-type-creats-a-tuple-so-to-access-this-we-need-to-use-indexes>
+
+In [15]:
+
+print(row[0])
+
+Murali
+
+In [16]:
+
+row = Row(name = 'Murali', salary = 200)
+print(row.name)
+print(row.salary)
+
+Murali
+200
+
+In [17]:
+
+# Row asts as class as well
+
+row1 = Row('name', 'salary') # This one is creaing a row type class
+p1 = row1('murali',2000) # Now in p1 we are storing data that is row1 type
+p2 = row1('geetha',300)
+print(p1.name)
+print(p2.name)
+
+murali
+geetha
+
+
+  Column Class in pyspark¶ <#Column-Class-in-pyspark>
+
+pyspark Column class represents a single column in a DataFrame
+
+pyspark.sql.Column class provides several functions to work with
+DataFram to manipulate the Column values, evaluate the boolean
+expression to filer rows, retrieve a value or part of a value from a
+DataFram column
+
+One of the simplest way to create a Column class is by using Pyspark
+lit() Sql function
+
+In [18]:
+
+from pyspark.sql.functions import lit
+col1 = lit("abcd")
+print(type(col1))
+
+<class 'pyspark.sql.column.Column'>
+
+In [19]:
+
+from pyspark.sql.types import StringType,StructField, IntegerType,StringType
+
+data = [    
+    ('Murali','male',2000),
+    ('Geetha','female',3000),
+    ('Kishan', 'male',4000),
+    ('Sasi', 'male',5000)
+]
+
+In [20]:
+
+schema = StructType([
+    StructField('name', dataType=StringType()),
+    StructField('gender', dataType=StringType()),
+    StructField('salary', dataType=StringType())
+]
+)
+
+In [21]:
+
+#schema = ['name','gender','salary']
+df = spark.createDataFrame(data,schema=schema)
+df.show()
+df.printSchema()
+
++------+------+------+
+|  name|gender|salary|
++------+------+------+
+|Murali|  male|  2000|
+|Geetha|female|  3000|
+|Kishan|  male|  4000|
+|  Sasi|  male|  5000|
++------+------+------+
+
+root
+ |-- name: string (nullable = true)
+ |-- gender: string (nullable = true)
+ |-- salary: string (nullable = true)
+
+In [22]:
+
+df1 = df.withColumn('newCol', lit('newColVal'))
+df1.show()
+df1.printSchema()
+
++------+------+------+---------+
+|  name|gender|salary|   newCol|
++------+------+------+---------+
+|Murali|  male|  2000|newColVal|
+|Geetha|female|  3000|newColVal|
+|Kishan|  male|  4000|newColVal|
+|  Sasi|  male|  5000|newColVal|
++------+------+------+---------+
+
+root
+ |-- name: string (nullable = true)
+ |-- gender: string (nullable = true)
+ |-- salary: string (nullable = true)
+ |-- newCol: string (nullable = false)
+
+Accessing columns in a DataFrame
+
+In [23]:
+
+df.select(df1.name).show()
+
++------+
+|  name|
++------+
+|Murali|
+|Geetha|
+|Kishan|
+|  Sasi|
++------+
+
+In [24]:
+
+df.select(df['name']).show()
+
++------+
+|  name|
++------+
+|Murali|
+|Geetha|
+|Kishan|
+|  Sasi|
++------+
+
+In [25]:
+
+df.select(df[0]).show()
+
++------+
+|  name|
++------+
+|Murali|
+|Geetha|
+|Kishan|
+|  Sasi|
++------+
+
+In [26]:
+
+from pyspark.sql.functions import col
+
+df.select(col('name')).show()
+
++------+
+|  name|
++------+
+|Murali|
+|Geetha|
+|Kishan|
+|  Sasi|
++------+
+
+In [27]:
+
+data = [    
+    ('Murali','male',2000,('pySpark','snowflake')),
+    ('Geetha','female',3000,('Unix','webx')),
+    ('Kishan', 'male',4000,('Data Sciences','ML')),
+    ('Sasi', 'male',5000,('python','AWS'))
+]
+
+skills_Stru = StructType(
+[
+    StructField('Skill1', dataType=StringType()),
+    StructField('Skill2', dataType=StringType())
+]
+)     
+
+schema = StructType([
+    StructField('name', dataType=StringType()),
+    StructField('gender', dataType=StringType()),
+    StructField('salary', dataType=StringType()),
+    StructField('skills', dataType=skills_Stru)
+]
+)
+
+df = spark.createDataFrame(data,schema)
+
+In [28]:
+
+df.show(truncate=False)
+df.printSchema()
+
++------+------+------+--------------------+
+|name  |gender|salary|skills              |
++------+------+------+--------------------+
+|Murali|male  |2000  |{pySpark, snowflake}|
+|Geetha|female|3000  |{Unix, webx}        |
+|Kishan|male  |4000  |{Data Sciences, ML} |
+|Sasi  |male  |5000  |{python, AWS}       |
++------+------+------+--------------------+
+
+root
+ |-- name: string (nullable = true)
+ |-- gender: string (nullable = true)
+ |-- salary: string (nullable = true)
+ |-- skills: struct (nullable = true)
+ |    |-- Skill1: string (nullable = true)
+ |    |-- Skill2: string (nullable = true)
+
+In [29]:
+
+df.select(df['name'],df['gender'],df['skills'].Skill1, df['skills'].Skill2).show()
+
++------+------+-------------+-------------+
+|  name|gender|skills.Skill1|skills.Skill2|
++------+------+-------------+-------------+
+|Murali|  male|      pySpark|    snowflake|
+|Geetha|female|         Unix|         webx|
+|Kishan|  male|Data Sciences|           ML|
+|  Sasi|  male|       python|          AWS|
++------+------+-------------+-------------+
+
+In [30]:
+
+df.select(df.name,df.gender,df.skills.skill1,df.skills.skill2).show()
+
++------+------+-------------+-------------+
+|  name|gender|skills.skill1|skills.skill2|
++------+------+-------------+-------------+
+|Murali|  male|      pySpark|    snowflake|
+|Geetha|female|         Unix|         webx|
+|Kishan|  male|Data Sciences|           ML|
+|  Sasi|  male|       python|          AWS|
++------+------+-------------+-------------+
+
+In [31]:
+
+df.select(col('name'),col('skills.skill1')).show()
+
++------+-------------+
+|  name|       skill1|
++------+-------------+
+|Murali|      pySpark|
+|Geetha|         Unix|
+|Kishan|Data Sciences|
+|  Sasi|       python|
++------+-------------+
+
+
+  when() otehrwise()¶ <#when()-otehrwise()>
+
+
+      These are just like case statements in sql¶
+      <#These-are-just-like-case-statements-in-sql>
+
+In [32]:
+
+data = [
+    (1,'Murali','male',2000),
+    (2,'Geetha','female',3000),
+    (3,'Kishan', '',4000),
+    (4,'Sasi', 'male',5000)
+]
+
+schema = StructType([
+    StructField('id', dataType=IntegerType()),
+    StructField('name', dataType=StringType()),
+    StructField('gender', dataType=StringType()),
+    StructField('salary', dataType=IntegerType())
+    
+]
+)
+
+df = spark.createDataFrame(data,schema=schema)
+df.show()
+df.printSchema()
+
++---+------+------+------+
+| id|  name|gender|salary|
++---+------+------+------+
+|  1|Murali|  male|  2000|
+|  2|Geetha|female|  3000|
+|  3|Kishan|      |  4000|
+|  4|  Sasi|  male|  5000|
++---+------+------+------+
+
+root
+ |-- id: integer (nullable = true)
+ |-- name: string (nullable = true)
+ |-- gender: string (nullable = true)
+ |-- salary: integer (nullable = true)
+
+In [33]:
+
+from pyspark.sql.functions import when
+
+In [34]:
+
+df.select(
+        df.id,
+        df.name,
+        when(df.gender=='female','f')\
+            .when(df.gender == 'male','m')\
+            .otherwise('m').alias('f_m')
+         ).show()
+
++---+------+---+
+| id|  name|f_m|
++---+------+---+
+|  1|Murali|  m|
+|  2|Geetha|  f|
+|  3|Kishan|  m|
+|  4|  Sasi|  m|
++---+------+---+
+
+In [35]:
+
+help(when)
+
+Help on function when in module pyspark.sql.functions:
+
+when(condition: pyspark.sql.column.Column, value: Any) -> pyspark.sql.column.Column
+    Evaluates a list of conditions and returns one of multiple possible result expressions.
+    If :func:`pyspark.sql.Column.otherwise` is not invoked, None is returned for unmatched
+    conditions.
+    
+    .. versionadded:: 1.4.0
+    
+    Parameters
+    ----------
+    condition : :class:`~pyspark.sql.Column`
+        a boolean :class:`~pyspark.sql.Column` expression.
+    value :
+        a literal value, or a :class:`~pyspark.sql.Column` expression.
+    
+    Examples
+    --------
+    >>> df.select(when(df['age'] == 2, 3).otherwise(4).alias("age")).collect()
+    [Row(age=3), Row(age=4)]
+    
+    >>> df.select(when(df.age == 2, df.age + 1).alias("age")).collect()
+    [Row(age=3), Row(age=None)]
+
+
+  Funcitions to apply on top of columns¶
+  <#Funcitions-to-apply-on-top-of-columns>
+
+
+      alias(), sort(),asc(), desc(), cast(), like()¶
+      <#alias(),-sort(),asc(),-desc(),-cast(),-like()>
+
+In [36]:
+
+df.sort(df.name.asc()).show()
+
++---+------+------+------+
+| id|  name|gender|salary|
++---+------+------+------+
+|  2|Geetha|female|  3000|
+|  3|Kishan|      |  4000|
+|  1|Murali|  male|  2000|
+|  4|  Sasi|  male|  5000|
++---+------+------+------+
+
+In [37]:
+
+df.select(df.id,df.name,df.gender,
+          df.salary.cast('float').alias('sal')
+         ).show()
+
++---+------+------+------+
+| id|  name|gender|   sal|
++---+------+------+------+
+|  1|Murali|  male|2000.0|
+|  2|Geetha|female|3000.0|
+|  3|Kishan|      |4000.0|
+|  4|  Sasi|  male|5000.0|
++---+------+------+------+
+
+In [38]:
+
+df.select(df.id,df.name,df.gender,\
+          df.salary.cast('float').alias('sal')\
+         )\
+.filter(df.gender.like('f%'))\
+.show()
+
++---+------+------+------+
+| id|  name|gender|   sal|
++---+------+------+------+
+|  2|Geetha|female|3000.0|
++---+------+------+------+
+
+
+  filter() & where() in pyspark¶ <#filter()-&-where()-in-pyspark>
+
+In [39]:
+
+df.filter(df.salary>3000).show()
+
++---+------+------+------+
+| id|  name|gender|salary|
++---+------+------+------+
+|  3|Kishan|      |  4000|
+|  4|  Sasi|  male|  5000|
++---+------+------+------+
+
+In [40]:
+
+df.filter(df.gender == 'female').show()
+
++---+------+------+------+
+| id|  name|gender|salary|
++---+------+------+------+
+|  2|Geetha|female|  3000|
++---+------+------+------+
+
+In [41]:
+
+df.where(df.id <= 3).show()
+
++---+------+------+------+
+| id|  name|gender|salary|
++---+------+------+------+
+|  1|Murali|  male|  2000|
+|  2|Geetha|female|  3000|
+|  3|Kishan|      |  4000|
++---+------+------+------+
+
+In [42]:
+
+df.where( (df.id<=3) & (df.gender == 'male') ).show()
+
++---+------+------+------+
+| id|  name|gender|salary|
++---+------+------+------+
+|  1|Murali|  male|  2000|
++---+------+------+------+
+
+In [43]:
+
+df.filter( (df.gender.like('f%') ) | (df.id <= 3) ).show()
+
++---+------+------+------+
+| id|  name|gender|salary|
++---+------+------+------+
+|  1|Murali|  male|  2000|
+|  2|Geetha|female|  3000|
+|  3|Kishan|      |  4000|
++---+------+------+------+
+
+In [44]:
+
+df.filter( (df.gender.like('f%') ) & (df.id <= 3) ).show()
+
++---+------+------+------+
+| id|  name|gender|salary|
++---+------+------+------+
+|  2|Geetha|female|  3000|
++---+------+------+------+
+
+
+  distinct() & dropDuplicates()¶ <#distinct()-&-dropDuplicates()>
+
+both work in same way but in case of dropDuplicates(), we can spcifiy
+columns as a list to consider to remove duplcates
+
+In [45]:
+
+data = [
+    (1,'Murali','male',2000),
+    (1,'Murali','male',5000),
+    (2,'Geetha','female',3000),
+    (2,'Geetha','female',3000),
+    (3,'abc','',4000),
+    (3,'Kishan', 'male',4000),
+    (3,'Kishan', 'male',4000),
+    (4,'Sasi', 'male',5000)
+]
+
+schema = StructType([
+    StructField('id', dataType=IntegerType()),
+    StructField('name', dataType=StringType()),
+    StructField('gender', dataType=StringType()),
+    StructField('salary', dataType=IntegerType())
+    
+]
+)
+
+df = spark.createDataFrame(data,schema=schema)
+df.show()
+df.printSchema()
+
++---+------+------+------+
+| id|  name|gender|salary|
++---+------+------+------+
+|  1|Murali|  male|  2000|
+|  1|Murali|  male|  5000|
+|  2|Geetha|female|  3000|
+|  2|Geetha|female|  3000|
+|  3|   abc|      |  4000|
+|  3|Kishan|  male|  4000|
+|  3|Kishan|  male|  4000|
+|  4|  Sasi|  male|  5000|
++---+------+------+------+
+
+root
+ |-- id: integer (nullable = true)
+ |-- name: string (nullable = true)
+ |-- gender: string (nullable = true)
+ |-- salary: integer (nullable = true)
+
+In [46]:
+
+df.distinct().show()
+
++---+------+------+------+
+| id|  name|gender|salary|
++---+------+------+------+
+|  1|Murali|  male|  2000|
+|  1|Murali|  male|  5000|
+|  2|Geetha|female|  3000|
+|  3|   abc|      |  4000|
+|  3|Kishan|  male|  4000|
+|  4|  Sasi|  male|  5000|
++---+------+------+------+
+
+In [47]:
+
+df.where(df.gender != '').dropDuplicates(('id', 'name')).show()
+
++---+------+------+------+
+| id|  name|gender|salary|
++---+------+------+------+
+|  1|Murali|  male|  2000|
+|  2|Geetha|female|  3000|
+|  3|Kishan|  male|  4000|
+|  4|  Sasi|  male|  5000|
++---+------+------+------+
+
+
+  orderBy() & sort()¶ <#orderBy()-&-sort()>
+
+Both of them work in same way.
+
+In [48]:
+
+df.show()
+
++---+------+------+------+
+| id|  name|gender|salary|
++---+------+------+------+
+|  1|Murali|  male|  2000|
+|  1|Murali|  male|  5000|
+|  2|Geetha|female|  3000|
+|  2|Geetha|female|  3000|
+|  3|   abc|      |  4000|
+|  3|Kishan|  male|  4000|
+|  3|Kishan|  male|  4000|
+|  4|  Sasi|  male|  5000|
++---+------+------+------+
+
+In [49]:
+
+from pyspark.sql.functions import desc , asc
+df.dropDuplicates(['name', 'gender']) \
+.select('id', 'name', 'salary') \
+  .orderBy('name', desc('salary')) \
+  .show()
+
++---+------+------+
+| id|  name|salary|
++---+------+------+
+|  2|Geetha|  3000|
+|  3|Kishan|  4000|
+|  1|Murali|  2000|
+|  4|  Sasi|  5000|
+|  3|   abc|  4000|
++---+------+------+
+
+In [ ]:
+
+ 
+
+In [50]:
+
+from pyspark.sql.functions import desc, asc, when, col
+# we need to replace null values or blabnks with some value for sort / orderby to work correctly
+df.dropDuplicates(['name', 'gender']) \
+  .orderBy(when(col('gender') == '', 'a').otherwise('a'), desc('salary'), asc('name')) \
+  .select('id', 'name', 'salary') \
+  .show()
+
++---+------+------+
+| id|  name|salary|
++---+------+------+
+|  4|  Sasi|  5000|
+|  3|Kishan|  4000|
+|  3|   abc|  4000|
+|  2|Geetha|  3000|
+|  1|Murali|  2000|
++---+------+------+
+
+In [51]:
+
+df.sort(df.salary,df.name.desc()).show()
+
++---+------+------+------+
+| id|  name|gender|salary|
++---+------+------+------+
+|  1|Murali|  male|  2000|
+|  2|Geetha|female|  3000|
+|  2|Geetha|female|  3000|
+|  3|   abc|      |  4000|
+|  3|Kishan|  male|  4000|
+|  3|Kishan|  male|  4000|
+|  4|  Sasi|  male|  5000|
+|  1|Murali|  male|  5000|
++---+------+------+------+
+
+
+  Union & Union All¶ <#Union-&-Union-All>
+
+union and unionAll transformations are used to merge two or mor
+DataFrames of the same schema or structure
+
+Unlike SQL both union and unionAll act similar way. they don't remove
+duplicates.
+
+To remove duplicates, we need to use distinct() function
+
+In [52]:
+
+mFamily = [
+        (1, 'Murali', 'M', 2000, 'IT'),
+        (2, 'Geetha', 'F', 3000, 'IT'),
+        (3, 'Chintu', 'M', 4000, 'IT'),
+        (4, 'Chinna', 'M', 5000, 'IT')    
+]
+
+eFamily = [
+        (1, 'Murali', 'M', 2000, 'IT'),
+        (2, 'Geetha', 'F', 3000, 'IT'),
+        (3, 'Chintu', 'M', 4000, 'IT'),
+        (4, 'Chinna', 'M', 5000, 'IT'),
+        (5, 'venkatramaiah', 'M', 6000, 'Lecturer'),
+        (6, 'Padmavatamma', 'F', 5000, 'Teacher'),
+        (7, 'Prasad', 'M', 7000, 'Business'),
+        (8, 'Sumitra', 'F', 6000, 'IT'),
+        (9, 'Poojita', 'F', 6000, 'Student')
+]
+
+schema = StructType([
+    StructField('id', dataType=IntegerType()),
+    StructField('name', dataType=StringType()),
+    StructField('gender', dataType=StringType()),
+    StructField('salary', dataType=IntegerType()),
+    StructField('job', dataType=StringType())
+    
+]
+)
+
+myFamily = spark.createDataFrame(mFamily,schema = schema)
+extendedFamily = spark.createDataFrame(eFamily,schema = schema)
+
+totalFamily = myFamily.union(extendedFamily)
+totalFamily2 = myFamily.unionAll(extendedFamily).distinct()
+
+print(totalFamily)
+print(totalFamily2)
+
+DataFrame[id: int, name: string, gender: string, salary: int, job: string]
+DataFrame[id: int, name: string, gender: string, salary: int, job: string]
+
+In [53]:
+
+totalFamily2.printSchema()
+
+root
+ |-- id: integer (nullable = true)
+ |-- name: string (nullable = true)
+ |-- gender: string (nullable = true)
+ |-- salary: integer (nullable = true)
+ |-- job: string (nullable = true)
+
+
+  groupBy()¶ <#groupBy()>
+
+investigate on groupByName()
+
+In [54]:
+
+totalFamily2.groupBy(['job','gender']).sum().show()
+
+# we are getting even id colum also getting summed which is wrong.
+
++--------+------+-------+-----------+
+|     job|gender|sum(id)|sum(salary)|
++--------+------+-------+-----------+
+|Business|     M|      7|       7000|
+| Teacher|     F|      6|       5000|
+|Lecturer|     M|      5|       6000|
+|      IT|     M|      8|      11000|
+| Student|     F|      9|       6000|
+|      IT|     F|     10|       9000|
++--------+------+-------+-----------+
+
+In [55]:
+
+totalFamily2.select(['job','gender','name','salary']).groupBy(['job','gender']).sum('salary').show()
+
++--------+------+-----------+
+|     job|gender|sum(salary)|
++--------+------+-----------+
+|Business|     M|       7000|
+| Teacher|     F|       5000|
+|Lecturer|     M|       6000|
+|      IT|     M|      11000|
+| Student|     F|       6000|
+|      IT|     F|       9000|
++--------+------+-----------+
+
+
+  groupBy agg()¶ <#groupBy-agg()>
+
+In [56]:
+
+from pyspark.sql.functions import count,min,max,sum
+
+In [57]:
+
+totalFamily2\
+.distinct()\
+.groupBy(['job','gender'])\
+.agg( \
+    count('id').alias('number of persons')\
+    ,sum('salary').alias('sum of Salary')\
+    )\
+.show()
+
++--------+------+-----------------+-------------+
+|     job|gender|number of persons|sum of Salary|
++--------+------+-----------------+-------------+
+|Business|     M|                1|         7000|
+| Teacher|     F|                1|         5000|
+|Lecturer|     M|                1|         6000|
+|      IT|     M|                3|        11000|
+| Student|     F|                1|         6000|
+|      IT|     F|                2|         9000|
++--------+------+-----------------+-------------+
+
+
+  unionByName()¶ <#unionByName()>
+
+This allows us to merge two dataframes even if they don't have matching
+columns. groupBy() will merge the DataFrames using their column indexs.
+Where as groupByName will merge them using the column names. but we need
+to specify alloMissingColumns = True
+
+In [58]:
+
+d1 = [
+    
+    (1,'murali',50),(1,'geetha',49)
+]
+s1 = StructType([
+    StructField('id',dataType = IntegerType()),
+    StructField('name',dataType = StringType()),
+    StructField('age',dataType = IntegerType())
+]
+)
+
+d2 = [
+    
+    (1,'murali',5000),(1,'geetha',2000)
+]
+s2 = StructType([
+    StructField('id',dataType = IntegerType()),
+    StructField('name',dataType = StringType()),
+    StructField('salary',dataType = IntegerType())
+]
+)
+
+df1 = spark.createDataFrame(d1,schema = s1)
+
+df2 = spark.createDataFrame(d2,schema=s2)
+
+df1.show()
+df2.show()
+
+df1.unionByName(df2,allowMissingColumns=True).show()
+
++---+------+---+
+| id|  name|age|
++---+------+---+
+|  1|murali| 50|
+|  1|geetha| 49|
++---+------+---+
+
++---+------+------+
+| id|  name|salary|
++---+------+------+
+|  1|murali|  5000|
+|  1|geetha|  2000|
++---+------+------+
+
++---+------+----+------+
+| id|  name| age|salary|
++---+------+----+------+
+|  1|murali|  50|  null|
+|  1|geetha|  49|  null|
+|  1|murali|null|  5000|
+|  1|geetha|null|  2000|
++---+------+----+------+
+
+In [ ]:
+
+ 
+

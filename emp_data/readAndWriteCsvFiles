@@ -1,0 +1,139 @@
+In [1]:
+
+import findspark
+findspark.init('/home/murali/spark-3.3.2-bin-hadoop3')
+import pyspark
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.getOrCreate()
+from pyspark.sql.types import *
+from pyspark.sql import *
+
+23/04/01 16:53:10 WARN Utils: Your hostname, murali-VirtualBox resolves to a loopback address: 127.0.1.1; using 10.0.2.15 instead (on interface enp0s3)
+23/04/01 16:53:10 WARN Utils: Set SPARK_LOCAL_IP if you need to bind to another address
+
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+
+23/04/01 16:53:11 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+23/04/01 16:53:12 WARN Utils: Service 'SparkUI' could not bind on port 4040. Attempting port 4041.
+23/04/01 16:53:12 WARN Utils: Service 'SparkUI' could not bind on port 4041. Attempting port 4042.
+23/04/01 16:53:12 WARN Utils: Service 'SparkUI' could not bind on port 4042. Attempting port 4043.
+23/04/01 16:53:12 WARN Utils: Service 'SparkUI' could not bind on port 4043. Attempting port 4044.
+23/04/01 16:53:12 WARN Utils: Service 'SparkUI' could not bind on port 4044. Attempting port 4045.
+23/04/01 16:53:12 WARN Utils: Service 'SparkUI' could not bind on port 4045. Attempting port 4046.
+
+
+  Read Data from CSV¶ <#Read-Data-from-CSV>
+
+In [2]:
+
+df = spark.read.csv(path = "emp_data/Employees1.csv",header=True,inferSchema=True)
+
+In [3]:
+
+display(df)
+
+DataFrame[id: int, name: string, gender: string, salary: int]
+
+In [4]:
+
+df.printSchema()
+
+root
+ |-- id: integer (nullable = true)
+ |-- name: string (nullable = true)
+ |-- gender: string (nullable = true)
+ |-- salary: integer (nullable = true)
+
+In [5]:
+
+df.show()
+
++---+------+------+------+
+| id|  name|gender|salary|
++---+------+------+------+
+|  1|murali|  male|  1000|
+|  2|chintu|  male|  2000|
++---+------+------+------+
+
+In [9]:
+
+schema = StructType(
+                    [
+                        StructField('Id',IntegerType()),
+                        StructField('name',StringType()),
+                        StructField('gender',StringType()),
+                        StructField('salary',IntegerType())
+                    ]
+
+)
+
+Another way to read CSV
+
+In [10]:
+
+df = spark.read.format('csv').option(key='header',value=True).load("emp_data/Employees1.csv",schema=schema)
+
+In [12]:
+
+# read multiple files and create a database. Need to pass the paths as a list
+df = spark.read.csv(path = (["emp_data/Employees1.csv","emp_data/Employees2.csv"]),header=True,inferSchema=True)
+
+In [13]:
+
+df.printSchema()
+
+root
+ |-- id: integer (nullable = true)
+ |-- name: string (nullable = true)
+ |-- gender: string (nullable = true)
+ |-- salary: integer (nullable = true)
+
+In [14]:
+
+df.show()
+
++---+------+------+------+
+| id|  name|gender|salary|
++---+------+------+------+
+|  3|geetha|female|  3000|
+|  4|chinna|  male|  4000|
+|  1|murali|  male|  1000|
+|  2|chintu|  male|  2000|
++---+------+------+------+
+
+In [15]:
+
+# load all files that has same schema in a folder
+df = spark.read.csv(path = (["emp_data/"]),header=True,inferSchema=True) # optionally we can give schema=schema inplace of inferSchema=True
+
+In [16]:
+
+df.show()
+
++---+------+------+------+
+| id|  name|gender|salary|
++---+------+------+------+
+|  3|geetha|female|  3000|
+|  4|chinna|  male|  4000|
+|  1|murali|  male|  1000|
+|  2|chintu|  male|  2000|
++---+------+------+------+
+
+
+  Write data Frame to CSV¶ <#Write-data-Frame-to-CSV>
+
+In [27]:
+
+df.write.csv(path = 'temp',header=True,mode = 'ignore') # we are writing data back to temp folder, if folder already exists, it ignores the to write.
+spark.read.csv(path = 'temp',header=True,schema=schema).show() # reding and showing data from temp folder
+
++---+------+------+------+
+| Id|  name|gender|salary|
++---+------+------+------+
+|  3|geetha|female|  3000|
+|  4|chinna|  male|  4000|
+|  1|murali|  male|  1000|
+|  2|chintu|  male|  2000|
++---+------+------+------+
+

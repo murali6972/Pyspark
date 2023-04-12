@@ -1,0 +1,550 @@
+In [139]:
+
+import findspark
+findspark.init('/home/murali/spark-3.3.2-bin-hadoop3')
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.appName("show").getOrCreate()
+
+In [2]:
+
+path = 'parquet/data_files/*.parquet'
+print(path)
+df = spark.read.parquet(path)
+
+parquet/data_files/*.parquet
+
+Show() It always displays 20 rows of data by default. it takes 3
+parameters optionally n = numnber of records that you want to show
+truncate = True / False --Default value is True so all records will get
+truncated if they are lengthy vertical = True / Fales -- By default it
+is False. If want to see them in row level insted of as a table we can
+use it.
+In [3]:
+
+df.show(1,truncate=False,vertical = True) # by default spark shows only 20 recrods if you don't specify
+
+-RECORD 0--------------------------------
+ registration_dttm | 2016-02-03 01:55:29 
+ id                | 1                   
+ first_name        | Amanda              
+ last_name         | Jordan              
+ email             | ajordan0@com.com    
+ gender            | Female              
+ ip_address        | 1.197.201.2         
+ cc                | 6759521864920116    
+ country           | Indonesia           
+ birthdate         | 3/8/1971            
+ salary            | 49756.53            
+ title             | Internal Auditor    
+ comments          | 1E+02               
+only showing top 1 row
+
+withColumn() pyspark withColumn() function is a transformation function
+of DataFrame which is used to 1 change the value, 2 conver the datatype
+of an existing Column, 3 create a new column etc.. When you use any
+transfoermation functions, we are not changing the existing data frame.
+but we are creating a new dataframe with new transformations. It is the
+same case withCoumn()
+In [4]:
+
+df.printSchema()
+
+root
+ |-- registration_dttm: timestamp (nullable = true)
+ |-- id: integer (nullable = true)
+ |-- first_name: string (nullable = true)
+ |-- last_name: string (nullable = true)
+ |-- email: string (nullable = true)
+ |-- gender: string (nullable = true)
+ |-- ip_address: string (nullable = true)
+ |-- cc: string (nullable = true)
+ |-- country: string (nullable = true)
+ |-- birthdate: string (nullable = true)
+ |-- salary: double (nullable = true)
+ |-- title: string (nullable = true)
+ |-- comments: string (nullable = true)
+
+In [5]:
+
+df[['registration_dttm','id','first_name','email','birthdate']].show(2,truncate=False)
+
++-------------------+---+----------+----------------+---------+
+|registration_dttm  |id |first_name|email           |birthdate|
++-------------------+---+----------+----------------+---------+
+|2016-02-03 01:55:29|1  |Amanda    |ajordan0@com.com|3/8/1971 |
+|2016-02-03 11:04:03|2  |Albert    |afreeman1@is.gd |1/16/1968|
++-------------------+---+----------+----------------+---------+
+only showing top 2 rows
+
+we are trying to convert birtdate as date type
+In [6]:
+
+from pyspark.sql.functions import col
+
+In [7]:
+
+df1 = df.withColumn('birthdate', df['birthdate'].cast('date'))
+
+In [8]:
+
+df.withColumn('salary', df['salary']*2)
+
+Out[8]:
+
+DataFrame[registration_dttm: timestamp, id: int, first_name: string, last_name: string, email: string, gender: string, ip_address: string, cc: string, country: string, birthdate: string, salary: double, title: string, comments: string]
+
+In [9]:
+
+# This is best way to select and manipulate multiple columns in a sing step as it's syntex is in sql format and 
+# and it gets executed in a single step and improve the performance too
+df.selectExpr('registration_dttm','id','first_name','last_name','email','gender',\
+              'ip_address','cc','country','cast(birthdate as date) as birthdate',\
+              'salary', 'salary*2 as salaryDouble','title','comments',\
+             'title as newTitle','"Murali" as UpdatedBy').show(3)
+
+'''
+Observe the fore changes we did below. 
+    - 'salary*2 as salaryDouble'
+    - newTitle
+    - birthdate
+    - UpdatedBy
+if we do the same withColumn() it is 4 step process and kills performance. In this case it is single stept process
+'''
+
++-------------------+---+----------+---------+--------------------+------+--------------+----------------+---------+---------+---------+------------+-------------------+--------+-------------------+---------+
+|  registration_dttm| id|first_name|last_name|               email|gender|    ip_address|              cc|  country|birthdate|   salary|salaryDouble|              title|comments|           newTitle|UpdatedBy|
++-------------------+---+----------+---------+--------------------+------+--------------+----------------+---------+---------+---------+------------+-------------------+--------+-------------------+---------+
+|2016-02-03 01:55:29|  1|    Amanda|   Jordan|    ajordan0@com.com|Female|   1.197.201.2|6759521864920116|Indonesia|     null| 49756.53|    99513.06|   Internal Auditor|   1E+02|   Internal Auditor|   Murali|
+|2016-02-03 11:04:03|  2|    Albert|  Freeman|     afreeman1@is.gd|  Male|218.111.175.34|                |   Canada|     null|150280.17|   300560.34|      Accountant IV|        |      Accountant IV|   Murali|
+|2016-02-02 19:09:31|  3|    Evelyn|   Morgan|emorgan2@altervis...|Female|  7.161.136.94|6767119071901597|   Russia|     null|144972.51|   289945.02|Structural Engineer|        |Structural Engineer|   Murali|
++-------------------+---+----------+---------+--------------------+------+--------------+----------------+---------+---------+---------+------------+-------------------+--------+-------------------+---------+
+only showing top 3 rows
+
+Out[9]:
+
+"\nObserve the fore changes we did below. \n    - 'salary*2 as salaryDouble'\n    - newTitle\n    - birthdate\n    - UpdatedBy\nif we do the same withColumn() it is 4 step process and kills performance. In this case it is single stept process\n"
+
+In [10]:
+
+help(df.selectExpr)
+
+Help on method selectExpr in module pyspark.sql.dataframe:
+
+selectExpr(*expr: Union[str, List[str]]) -> 'DataFrame' method of pyspark.sql.dataframe.DataFrame instance
+    Projects a set of SQL expressions and returns a new :class:`DataFrame`.
+    
+    This is a variant of :func:`select` that accepts SQL expressions.
+    
+    .. versionadded:: 1.3.0
+    
+    Examples
+    --------
+    >>> df.selectExpr("age * 2", "abs(age)").collect()
+    [Row((age * 2)=4, abs(age)=2), Row((age * 2)=10, abs(age)=5)]
+
+In [11]:
+
+help(df.withColumnRenamed)
+
+Help on method withColumnRenamed in module pyspark.sql.dataframe:
+
+withColumnRenamed(existing: str, new: str) -> 'DataFrame' method of pyspark.sql.dataframe.DataFrame instance
+    Returns a new :class:`DataFrame` by renaming an existing column.
+    This is a no-op if schema doesn't contain the given column name.
+    
+    .. versionadded:: 1.3.0
+    
+    Parameters
+    ----------
+    existing : str
+        string, name of the existing column to rename.
+    new : str
+        string, new name of the column.
+    
+    Examples
+    --------
+    >>> df.withColumnRenamed('age', 'age2').collect()
+    [Row(age2=2, name='Alice'), Row(age2=5, name='Bob')]
+
+In [12]:
+
+df.printSchema()
+
+root
+ |-- registration_dttm: timestamp (nullable = true)
+ |-- id: integer (nullable = true)
+ |-- first_name: string (nullable = true)
+ |-- last_name: string (nullable = true)
+ |-- email: string (nullable = true)
+ |-- gender: string (nullable = true)
+ |-- ip_address: string (nullable = true)
+ |-- cc: string (nullable = true)
+ |-- country: string (nullable = true)
+ |-- birthdate: string (nullable = true)
+ |-- salary: double (nullable = true)
+ |-- title: string (nullable = true)
+ |-- comments: string (nullable = true)
+
+In [13]:
+
+df.withColumnRenamed('comments', 'New_Name').printSchema()
+
+root
+ |-- registration_dttm: timestamp (nullable = true)
+ |-- id: integer (nullable = true)
+ |-- first_name: string (nullable = true)
+ |-- last_name: string (nullable = true)
+ |-- email: string (nullable = true)
+ |-- gender: string (nullable = true)
+ |-- ip_address: string (nullable = true)
+ |-- cc: string (nullable = true)
+ |-- country: string (nullable = true)
+ |-- birthdate: string (nullable = true)
+ |-- salary: double (nullable = true)
+ |-- title: string (nullable = true)
+ |-- New_Name: string (nullable = true)
+
+
+  StructType() & SturctField()¶ <#StructType()-&-SturctField()>
+
+
+      PySpark SturctType() & SturctField() classes are used to
+      programatically specify the schema to the Data Frame and¶
+      <#PySpark-SturctType()-&-SturctField()-classes-are-used-to-programatically-specify-the-schema-to-the-Data-Frame-and>
+
+
+      create complex columns like nested sturct, array and map columns¶
+      <#create-complex-columns-like-nested-sturct,-array-and-map-columns>
+
+
+      StructType is collection of StructFields¶
+      <#StructType-is-collection-of-StructFields>
+
+
+      to use this we need to import StuructTypy, SturctField,
+      StringType,IntegerType from pyspark.sql.types¶
+      <#to-use-this-we-need-to-import-StuructTypy,-SturctField,-StringType,IntegerType-from-pyspark.sql.types>
+
+In [43]:
+
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType, ArrayType,DecimalType
+
+In [16]:
+
+data = [\
+            (1,'murali',2000),
+            (2, 'geetha',3000),
+            (3, 'chintu',4000),
+            (4, 'Chinna',5000),
+       ]
+
+df = spark.createDataFrame(data)
+
+In [19]:
+
+df.show()
+df.printSchema()
+
++---+------+----+
+| _1|    _2|  _3|
++---+------+----+
+|  1|murali|2000|
+|  2|geetha|3000|
+|  3|chintu|4000|
+|  4|Chinna|5000|
++---+------+----+
+
+root
+ |-- _1: long (nullable = true)
+ |-- _2: string (nullable = true)
+ |-- _3: long (nullable = true)
+
+In [24]:
+
+schema = StructType(
+                    [
+                        StructField('Id',IntegerType()),
+                        StructField('name',StringType()),
+                        StructField('salary',IntegerType())
+                    ])
+
+In [26]:
+
+df_new = spark.createDataFrame(data,schema=schema)
+df_new.printSchema()
+
+root
+ |-- Id: integer (nullable = true)
+ |-- name: string (nullable = true)
+ |-- salary: integer (nullable = true)
+
+In [31]:
+
+schema = StructType(
+                    [
+                        StructField(name = 'Id',dataType = IntegerType(),nullable=False),
+                        StructField(name = 'name',dataType = StringType(),nullable=False),
+                        StructField(name = 'salary',dataType = IntegerType(),nullable=False)
+                    ])
+
+In [36]:
+
+df_new_struc = spark.createDataFrame(data,schema = schema)
+
+df_new_struc.printSchema()
+
+root
+ |-- Id: integer (nullable = false)
+ |-- name: string (nullable = false)
+ |-- salary: integer (nullable = false)
+
+In [80]:
+
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType, ArrayType,DecimalType, FloatType
+
+data_new = [
+    
+    (1,['Reddy','pujari'],2000.00),
+    (2,['Geetha','Tiruvaipati'],3000.00),
+    (3,['Kishan','Thomala'],4000.00),
+    (4,['sasi','Thomala'],5000.00)
+]
+
+Name_structure = StructType(
+    [
+        StructField('FirstName', StringType()),
+        StructField('LastName', StringType())
+    ]
+)
+
+schema_new = StructType(
+    [
+    StructField(name='id', dataType=IntegerType(), nullable=False),
+    StructField(name='Name', dataType=Name_structure,nullable=False),
+    StructField(name='Salary',dataType=FloatType(),nullable=False)
+    ]
+)
+'''
+schema_new = StructType([
+    StructField(name='id', dataType=IntegerType(), nullable=False),
+    StructField(name='Name', dataType=Name_structure, nullable=False),
+    StructField(name='Salary', dataType=DecimalType(), nullable=False)
+])
+'''
+
+df_new = spark.createDataFrame(data_new,schema=schema_new)
+df_new.printSchema()
+df_new.show()
+display(df_new)
+
+root
+ |-- id: integer (nullable = false)
+ |-- Name: struct (nullable = false)
+ |    |-- FirstName: string (nullable = true)
+ |    |-- LastName: string (nullable = true)
+ |-- Salary: float (nullable = false)
+
++---+--------------------+------+
+| id|                Name|Salary|
++---+--------------------+------+
+|  1|     {Reddy, pujari}|2000.0|
+|  2|{Geetha, Tiruvaip...|3000.0|
+|  3|   {Kishan, Thomala}|4000.0|
+|  4|     {sasi, Thomala}|5000.0|
++---+--------------------+------+
+
+DataFrame[id: int, Name: struct<FirstName:string,LastName:string>, Salary: float]
+
+
+  Array type columns in PySpark¶ <#Array-type-columns-in-PySpark>
+
+In [94]:
+
+data_new = [
+    
+    (1,['Reddy','pujari'],2000.00),
+    (2,['Geetha','Tiruvaipati'],3000.00),
+    (3,['Kishan','Thomala'],4000.00),
+    (4,['sasi','Thomala'],5000.00)
+]
+
+schema_new = StructType(
+    [
+    StructField(name='id', dataType=IntegerType(), nullable=False),
+    StructField(name = 'name', dataType=ArrayType(StringType())),
+    StructField(name='Salary',dataType=FloatType(),nullable=False)
+    ]
+)
+
+df = spark.createDataFrame(data_new,schema=schema_new)
+df.printSchema()
+
+root
+ |-- id: integer (nullable = false)
+ |-- name: array (nullable = true)
+ |    |-- element: string (containsNull = true)
+ |-- Salary: float (nullable = false)
+
+In [96]:
+
+df.show()
+
++---+--------------------+------+
+| id|                name|Salary|
++---+--------------------+------+
+|  1|     [Reddy, pujari]|2000.0|
+|  2|[Geetha, Tiruvaip...|3000.0|
+|  3|   [Kishan, Thomala]|4000.0|
+|  4|     [sasi, Thomala]|5000.0|
++---+--------------------+------+
+
+
+  explode() , split(), array() and array_contains()¶
+  <#explode()-,-split(),-array()-and-array_contains()>
+
+In [119]:
+
+data = [
+    (1,'Murali',['pySpark','snowflake','AWS']),
+    (2,'Geetha',['Unix','webx','python']),
+    (3,'kishan',['Data Sciences','ML','Stats']),
+    (4,'Sasi',['python','AWS','Glue'])
+]
+
+schema = ['Id','Name','Skills']
+
+skills_df = spark.createDataFrame(data,schema=schema)
+
+skills_df.show(truncate=False)
+skills_df.printSchema()
+
++---+------+--------------------------+
+|Id |Name  |Skills                    |
++---+------+--------------------------+
+|1  |Murali|[pySpark, snowflake, AWS] |
+|2  |Geetha|[Unix, webx, python]      |
+|3  |kishan|[Data Sciences, ML, Stats]|
+|4  |Sasi  |[python, AWS, Glue]       |
++---+------+--------------------------+
+
+root
+ |-- Id: long (nullable = true)
+ |-- Name: string (nullable = true)
+ |-- Skills: array (nullable = true)
+ |    |-- element: string (containsNull = true)
+
+In [120]:
+
+from pyspark.sql.functions import col, explode
+skill_explode = skills_df.withColumn('skill',explode(col('skills')))
+
+In [108]:
+
+skill_explode.show()
+
++---+------+--------------------+-------------+
+| Id|  Name|              Skills|        skill|
++---+------+--------------------+-------------+
+|  1|Murali|[pySpark, snowfla...|      pySpark|
+|  1|Murali|[pySpark, snowfla...|    snowflake|
+|  1|Murali|[pySpark, snowfla...|          AWS|
+|  2|Geetha|[Unix, webx, python]|         Unix|
+|  2|Geetha|[Unix, webx, python]|         webx|
+|  2|Geetha|[Unix, webx, python]|       python|
+|  3|kishan|[Data Sciences, M...|Data Sciences|
+|  3|kishan|[Data Sciences, M...|           ML|
+|  3|kishan|[Data Sciences, M...|        Stats|
+|  4|  Sasi| [python, AWS, Glue]|       python|
+|  4|  Sasi| [python, AWS, Glue]|          AWS|
+|  4|  Sasi| [python, AWS, Glue]|         Glue|
++---+------+--------------------+-------------+
+
+In [125]:
+
+skills_df.selectExpr('id', 'name', "explode(skills) as skill").show()
+
++---+------+-------------+
+| id|  name|        skill|
++---+------+-------------+
+|  1|Murali|      pySpark|
+|  1|Murali|    snowflake|
+|  1|Murali|          AWS|
+|  2|Geetha|         Unix|
+|  2|Geetha|         webx|
+|  2|Geetha|       python|
+|  3|kishan|Data Sciences|
+|  3|kishan|           ML|
+|  3|kishan|        Stats|
+|  4|  Sasi|       python|
+|  4|  Sasi|          AWS|
+|  4|  Sasi|         Glue|
++---+------+-------------+
+
+
+  split()¶ <#split()>
+
+In [131]:
+
+data = [
+    (1,'Murali','pySpark,snowflake,AWS'),
+    (2,'Geetha','Unix,webx,python'),
+    (3,'kishan','Data Sciences,ML,Stats'),
+    (4,'Sasi','python,AWS,Glue')
+]
+
+schema = ['id','name','skills']
+df = spark.createDataFrame(data,schema=schema)
+df.show(truncate=False)
+
++---+------+----------------------+
+|id |name  |skills                |
++---+------+----------------------+
+|1  |Murali|pySpark,snowflake,AWS |
+|2  |Geetha|Unix,webx,python      |
+|3  |kishan|Data Sciences,ML,Stats|
+|4  |Sasi  |python,AWS,Glue       |
++---+------+----------------------+
+
+In [134]:
+
+from pyspark.sql.functions import split
+
+In [138]:
+
+df.withColumn('skills',split('skills',',')).withColumn('skill',explode(col('skills'))).show()
+
++---+------+--------------------+-------------+
+| id|  name|              skills|        skill|
++---+------+--------------------+-------------+
+|  1|Murali|[pySpark, snowfla...|      pySpark|
+|  1|Murali|[pySpark, snowfla...|    snowflake|
+|  1|Murali|[pySpark, snowfla...|          AWS|
+|  2|Geetha|[Unix, webx, python]|         Unix|
+|  2|Geetha|[Unix, webx, python]|         webx|
+|  2|Geetha|[Unix, webx, python]|       python|
+|  3|kishan|[Data Sciences, M...|Data Sciences|
+|  3|kishan|[Data Sciences, M...|           ML|
+|  3|kishan|[Data Sciences, M...|        Stats|
+|  4|  Sasi| [python, AWS, Glue]|       python|
+|  4|  Sasi| [python, AWS, Glue]|          AWS|
+|  4|  Sasi| [python, AWS, Glue]|         Glue|
++---+------+--------------------+-------------+
+
+
+  Array_Contains() is the funciton to be applied on top of an Array to
+  check if it contains a specific value in it¶
+  <#Array_Contains()-is-the-funciton-to-be-applied-on-top-of-an-Array-to-check-if-it-contains-a-specific-value-in-it>
+
+
+  if it contains the value we will get True other wise we will get False
+  if the Arra is null, we see null¶
+  <#if-it-contains-the-value-we-will-get-True-other-wise-we-will-get-False-if-the-Arra-is-null,-we-see-null>
+
+In [ ]:
+
+ 
+
+In [ ]:
+
+ 
+

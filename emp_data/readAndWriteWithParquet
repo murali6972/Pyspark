@@ -1,0 +1,245 @@
+In [1]:
+
+import findspark
+
+In [2]:
+
+findspark.init('/home/murali/spark-3.3.2-bin-hadoop3')
+import pyspark
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.appName("workwithParquet").getOrCreate()
+
+23/03/31 17:06:25 WARN Utils: Your hostname, murali-VirtualBox resolves to a loopback address: 127.0.1.1; using 10.0.2.15 instead (on interface enp0s3)
+23/03/31 17:06:25 WARN Utils: Set SPARK_LOCAL_IP if you need to bind to another address
+
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+
+23/03/31 17:06:25 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+23/03/31 17:06:26 WARN Utils: Service 'SparkUI' could not bind on port 4040. Attempting port 4041.
+23/03/31 17:06:26 WARN Utils: Service 'SparkUI' could not bind on port 4041. Attempting port 4042.
+23/03/31 17:06:26 WARN Utils: Service 'SparkUI' could not bind on port 4042. Attempting port 4043.
+
+In [3]:
+
+from pyspark.sql.types import *
+from pyspark.sql.dataframe import *
+from pyspark.sql.functions import *
+
+In [4]:
+
+path = 'parquet/data_files/*.parquet'
+print(path)
+
+parquet/data_files/*.parquet
+
+In [5]:
+
+df = spark.read.parquet(path)
+
+In [6]:
+
+df.show()
+
++-------------------+---+----------+---------+--------------------+------+---------------+-------------------+--------------------+----------+---------+--------------------+--------------------+
+|  registration_dttm| id|first_name|last_name|               email|gender|     ip_address|                 cc|             country| birthdate|   salary|               title|            comments|
++-------------------+---+----------+---------+--------------------+------+---------------+-------------------+--------------------+----------+---------+--------------------+--------------------+
+|2016-02-03 01:55:29|  1|    Amanda|   Jordan|    ajordan0@com.com|Female|    1.197.201.2|   6759521864920116|           Indonesia|  3/8/1971| 49756.53|    Internal Auditor|               1E+02|
+|2016-02-03 11:04:03|  2|    Albert|  Freeman|     afreeman1@is.gd|  Male| 218.111.175.34|                   |              Canada| 1/16/1968|150280.17|       Accountant IV|                    |
+|2016-02-02 19:09:31|  3|    Evelyn|   Morgan|emorgan2@altervis...|Female|   7.161.136.94|   6767119071901597|              Russia|  2/1/1960|144972.51| Structural Engineer|                    |
+|2016-02-02 18:36:21|  4|    Denise|    Riley|    driley3@gmpg.org|Female|  140.35.109.83|   3576031598965625|               China|  4/8/1997| 90263.05|Senior Cost Accou...|                    |
+|2016-02-02 23:05:31|  5|    Carlos|    Burns|cburns4@miitbeian...|      | 169.113.235.40|   5602256255204850|        South Africa|          |     null|                    |                    |
+|2016-02-03 01:22:34|  6|   Kathryn|    White|  kwhite5@google.com|Female| 195.131.81.179|   3583136326049310|           Indonesia| 2/25/1983| 69227.11|   Account Executive|                    |
+|2016-02-03 02:33:08|  7|    Samuel|   Holmes|sholmes6@foxnews.com|  Male| 232.234.81.197|   3582641366974690|            Portugal|12/18/1987| 14247.62|Senior Financial ...|                    |
+|2016-02-03 00:47:06|  8|     Harry|   Howell| hhowell7@eepurl.com|  Male|   91.235.51.73|                   |Bosnia and Herzeg...|  3/1/1962|186469.43|    Web Developer IV|                    |
+|2016-02-02 21:52:53|  9|      Jose|   Foster|   jfoster8@yelp.com|  Male|   132.31.53.61|                   |         South Korea| 3/27/1992|231067.84|Software Test Eng...|               1E+02|
+|2016-02-03 12:29:47| 10|     Emily|  Stewart|estewart9@opensou...|Female| 143.28.251.245|   3574254110301671|             Nigeria| 1/28/1997| 27234.28|     Health Coach IV|                    |
+|2016-02-02 18:10:42| 11|     Susan|  Perkins| sperkinsa@patch.com|Female|    180.85.0.62|   3573823609854134|              Russia|          |210001.95|                    |                    |
+|2016-02-03 12:04:34| 12|     Alice|    Berry|aberryb@wikipedia...|Female| 246.225.12.189|   4917830851454417|               China| 8/12/1968| 22944.53|    Quality Engineer|                    |
+|2016-02-03 12:48:17| 13|    Justin|    Berry|jberryc@usatoday.com|  Male|   157.7.146.43|6331109912871813274|              Zambia| 8/15/1975| 44165.46|Structural Analys...|                    |
+|2016-02-03 15:46:52| 14|     Kathy| Reynolds|kreynoldsd@redcro...|Female|  81.254.172.13|   5537178462965976|Bosnia and Herzeg...| 6/27/1970|286592.99|           Librarian|                    |
+|2016-02-03 02:53:23| 15|   Dorothy|   Hudson|dhudsone@blogger.com|Female|       8.59.7.0|   3542586858224170|               Japan|12/20/1989|157099.71|  Nurse Practicioner|<script>alert('hi...|
+|2016-02-02 18:44:01| 16|     Bruce|   Willis|bwillisf@bluehost...|  Male|239.182.219.189|   3573030625927601|              Brazil|          |239100.65|                    |                    |
+|2016-02-02 18:57:45| 17|     Emily|  Andrews|eandrewsg@cornell...|Female| 29.231.180.172|     30271790537626|              Russia| 4/13/1990|116800.65|        Food Chemist|                    |
+|2016-02-03 10:44:24| 18|   Stephen|  Wallace|swallaceh@netvibe...|  Male|  152.49.213.62|   5433943468526428|             Ukraine| 1/15/1978|248877.99|Account Represent...|                    |
+|2016-02-03 05:45:54| 19|  Clarence|   Lawson|clawsoni@vkontakt...|  Male| 107.175.15.152|   3544052814080964|              Russia|          |177122.99|                    |                    |
+|2016-02-03 04:30:36| 20|   Rebecca|     Bell| rbellj@bandcamp.com|Female|172.215.104.127|                   |               China|          |137251.19|                    |                    |
++-------------------+---+----------+---------+--------------------+------+---------------+-------------------+--------------------+----------+---------+--------------------+--------------------+
+only showing top 20 rows
+
+In [7]:
+
+display(df)
+print(df.count())
+
+DataFrame[registration_dttm: timestamp, id: int, first_name: string, last_name: string, email: string, gender: string, ip_address: string, cc: string, country: string, birthdate: string, salary: double, title: string, comments: string]
+
+5000
+
+In [8]:
+
+df.write.parquet("parquet/destination",mode='overwrite')
+
+In [9]:
+
+df_new = spark.read.parquet("parquet/destination/")
+df_new.count()
+
+Out[9]:
+
+5000
+
+In [10]:
+
+help(df.write.parquet)
+
+Help on method parquet in module pyspark.sql.readwriter:
+
+parquet(path: str, mode: Optional[str] = None, partitionBy: Union[str, List[str], NoneType] = None, compression: Optional[str] = None) -> None method of pyspark.sql.readwriter.DataFrameWriter instance
+    Saves the content of the :class:`DataFrame` in Parquet format at the specified path.
+    
+    .. versionadded:: 1.4.0
+    
+    Parameters
+    ----------
+    path : str
+        the path in any Hadoop supported file system
+    mode : str, optional
+        specifies the behavior of the save operation when data already exists.
+    
+        * ``append``: Append contents of this :class:`DataFrame` to existing data.
+        * ``overwrite``: Overwrite existing data.
+        * ``ignore``: Silently ignore this operation if data already exists.
+        * ``error`` or ``errorifexists`` (default case): Throw an exception if data already                 exists.
+    partitionBy : str or list, optional
+        names of partitioning columns
+    
+    Other Parameters
+    ----------------
+    Extra options
+        For the extra options, refer to
+        `Data Source Option <https://spark.apache.org/docs/latest/sql-data-sources-parquet.html#data-source-option>`_
+        in the version you use.
+    
+        .. # noqa
+    
+    Examples
+    --------
+    >>> df.write.parquet(os.path.join(tempfile.mkdtemp(), 'data'))
+
+In [11]:
+
+display(df_new)
+
+DataFrame[registration_dttm: timestamp, id: int, first_name: string, last_name: string, email: string, gender: string, ip_address: string, cc: string, country: string, birthdate: string, salary: double, title: string, comments: string]
+
+In [ ]:
+
+ 
+
+In [ ]:
+
+ 
+
+
+  read the same data from github ?¶ <#read-the-same-data-from-github-?>
+
+In [14]:
+
+path = 'https://github.com/murali6972/kylo/blob/master/samples/sample-data/parquet/userdata1.parquet'
+
+In [17]:
+
+df_git = spark.read.parquet(path)
+
+---------------------------------------------------------------------------
+Py4JJavaError                             Traceback (most recent call last)
+Cell In[17], line 1
+----> 1 df_git = spark.read.parquet(path)
+
+File ~/spark-3.3.2-bin-hadoop3/python/pyspark/sql/readwriter.py:364, in DataFrameReader.parquet(self, *paths, **options)
+    353 int96RebaseMode = options.get("int96RebaseMode", None)
+    354 self._set_opts(
+    355     mergeSchema=mergeSchema,
+    356     pathGlobFilter=pathGlobFilter,
+   (...)
+    361     int96RebaseMode=int96RebaseMode,
+    362 )
+--> 364 return self._df(self._jreader.parquet(_to_seq(self._spark._sc, paths)))
+
+File ~/spark-3.3.2-bin-hadoop3/python/lib/py4j-0.10.9.5-src.zip/py4j/java_gateway.py:1321, in JavaMember.__call__(self, *args)
+   1315 command = proto.CALL_COMMAND_NAME +\
+   1316     self.command_header +\
+   1317     args_command +\
+   1318     proto.END_COMMAND_PART
+   1320 answer = self.gateway_client.send_command(command)
+-> 1321 return_value = get_return_value(
+   1322     answer, self.gateway_client, self.target_id, self.name)
+   1324 for temp_arg in temp_args:
+   1325     temp_arg._detach()
+
+File ~/spark-3.3.2-bin-hadoop3/python/pyspark/sql/utils.py:190, in capture_sql_exception.<locals>.deco(*a, **kw)
+    188 def deco(*a: Any, **kw: Any) -> Any:
+    189     try:
+--> 190         return f(*a, **kw)
+    191     except Py4JJavaError as e:
+    192         converted = convert_exception(e.java_exception)
+
+File ~/spark-3.3.2-bin-hadoop3/python/lib/py4j-0.10.9.5-src.zip/py4j/protocol.py:326, in get_return_value(answer, gateway_client, target_id, name)
+    324 value = OUTPUT_CONVERTER[type](answer[2:], gateway_client)
+    325 if answer[1] == REFERENCE_TYPE:
+--> 326     raise Py4JJavaError(
+    327         "An error occurred while calling {0}{1}{2}.\n".
+    328         format(target_id, ".", name), value)
+    329 else:
+    330     raise Py4JError(
+    331         "An error occurred while calling {0}{1}{2}. Trace:\n{3}\n".
+    332         format(target_id, ".", name, value))
+
+Py4JJavaError: An error occurred while calling o55.parquet.
+: java.lang.UnsupportedOperationException
+	at org.apache.hadoop.fs.http.AbstractHttpFileSystem.listStatus(AbstractHttpFileSystem.java:95)
+	at org.apache.hadoop.fs.http.HttpsFileSystem.listStatus(HttpsFileSystem.java:23)
+	at org.apache.spark.util.HadoopFSUtils$.listLeafFiles(HadoopFSUtils.scala:225)
+	at org.apache.spark.util.HadoopFSUtils$.$anonfun$parallelListLeafFilesInternal$1(HadoopFSUtils.scala:95)
+	at scala.collection.TraversableLike.$anonfun$map$1(TraversableLike.scala:286)
+	at scala.collection.mutable.ResizableArray.foreach(ResizableArray.scala:62)
+	at scala.collection.mutable.ResizableArray.foreach$(ResizableArray.scala:55)
+	at scala.collection.mutable.ArrayBuffer.foreach(ArrayBuffer.scala:49)
+	at scala.collection.TraversableLike.map(TraversableLike.scala:286)
+	at scala.collection.TraversableLike.map$(TraversableLike.scala:279)
+	at scala.collection.AbstractTraversable.map(Traversable.scala:108)
+	at org.apache.spark.util.HadoopFSUtils$.parallelListLeafFilesInternal(HadoopFSUtils.scala:85)
+	at org.apache.spark.util.HadoopFSUtils$.parallelListLeafFiles(HadoopFSUtils.scala:69)
+	at org.apache.spark.sql.execution.datasources.InMemoryFileIndex$.bulkListLeafFiles(InMemoryFileIndex.scala:158)
+	at org.apache.spark.sql.execution.datasources.InMemoryFileIndex.listLeafFiles(InMemoryFileIndex.scala:131)
+	at org.apache.spark.sql.execution.datasources.InMemoryFileIndex.refresh0(InMemoryFileIndex.scala:94)
+	at org.apache.spark.sql.execution.datasources.InMemoryFileIndex.<init>(InMemoryFileIndex.scala:66)
+	at org.apache.spark.sql.execution.datasources.DataSource.createInMemoryFileIndex(DataSource.scala:567)
+	at org.apache.spark.sql.execution.datasources.DataSource.resolveRelation(DataSource.scala:409)
+	at org.apache.spark.sql.DataFrameReader.loadV1Source(DataFrameReader.scala:228)
+	at org.apache.spark.sql.DataFrameReader.$anonfun$load$2(DataFrameReader.scala:210)
+	at scala.Option.getOrElse(Option.scala:189)
+	at org.apache.spark.sql.DataFrameReader.load(DataFrameReader.scala:210)
+	at org.apache.spark.sql.DataFrameReader.parquet(DataFrameReader.scala:562)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:566)
+	at py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)
+	at py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:357)
+	at py4j.Gateway.invoke(Gateway.java:282)
+	at py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)
+	at py4j.commands.CallCommand.execute(CallCommand.java:79)
+	at py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:182)
+	at py4j.ClientServerConnection.run(ClientServerConnection.java:106)
+	at java.base/java.lang.Thread.run(Thread.java:829)
+
+In [ ]:
+
+df_git.show()
+
+In [ ]:
+
+ 
+
